@@ -23,8 +23,14 @@ router.post('/signup', async (req, res) => {
       const existing = await Agronomist.findOne({ email });
       if (existing) return res.status(400).json({ message: 'Email already registered' });
 
-      const agronomist = await Agronomist.create({ firstName, lastName, email, phone, passwordHash });
-      const token = jwt.sign({ userId: agronomist._id, role: 'agronomist' }, process.env.JWT_SECRET, { expiresIn: '7d' });
+      const agronomist = await Agronomist.create({ 
+
+             firstName, lastName, email, phone, passwordHash
+     });
+
+      const token = jwt.sign({ userId: agronomist._id, role: 'agronomist' },
+         process.env.JWT_SECRET, { expiresIn: '7d' } );
+         
       return res.json({ token, user: agronomist, role: 'agronomist' });
 
     } else {

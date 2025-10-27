@@ -36,10 +36,10 @@ const AgronomistSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-    createdAt: {
-        type: Date,
-        default: Date.now,
-    },
+    // createdAt: {
+    //     type: Date,
+    //     default: Date.now,
+    // },
     availabilityStatus: {
         type: Boolean,
         default: true,
