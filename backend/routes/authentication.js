@@ -1,73 +1,88 @@
-const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
-const Farmer = require('../models/farmer');
-const Agronomist = require('../models/agronomist');
+const express = require("express");
+const User = require("../models/user");
+const { signAccessToken, signRefreshToken, verifyRefreshToken } = require("../utils/token");
+const dotenv = require("dotenv");
+dotenv.config();
+
 const router = express.Router();
 
-// SIGNUP
-router.post('/signup', async (req, res) => {
+// Register
+router.post("/register", async (req, res) => {
   try {
-    const { role, fullName, email, phone, password } = req.body;
-    const passwordHash = await bcrypt.hash(password, 10);
+    const { name, email, password, role } = req.body;
+    if (!name || !email || !password || !role) return res.status(400).json({ message: "Missing fields" });
+    if (!["farmer","agronomist"].includes(role)) return res.status(400).json({ message: "Invalid role" });
 
-    if (role === 'farmer') {
-      const existing = await Farmer.findOne({ email });
-      if (existing) return res.status(400).json({ message: 'Email already registered' });
+    const existing = await User.findOne({ email });
+    if (existing) return res.status(409).json({ message: "User exists" });
 
-      const farmer = await Farmer.create({ fullName, email, phone, passwordHash });
-      const token = jwt.sign({ userId: farmer._id, role: 'farmer' }, process.env.JWT_SECRET, { expiresIn: '7d' });
-      return res.json({ token, user: farmer, role: 'farmer' });
+    const user = new User({ name, email, password, role });
+    await user.save();
 
-    } else if (role === 'agronomist') {
-      const existing = await Agronomist.findOne({ email });
-      if (existing) return res.status(400).json({ message: 'Email already registered' });
+    // Optionally auto-login by issuing tokens
+    const accessToken = signAccessToken(user);
+    const refreshToken = signRefreshToken(user);
 
-      const agronomist = await Agronomist.create({ 
-
-             firstName, lastName, email, phone, passwordHash
-     });
-
-      const token = jwt.sign({ userId: agronomist._id, role: 'agronomist' },
-         process.env.JWT_SECRET, { expiresIn: '7d' } );
-         
-      return res.json({ token, user: agronomist, role: 'agronomist' });
-
-    } else {
-      return res.status(400).json({ message: 'Invalid role type' });
-    }
-
+    // For refresh tokens store them server-side (DB or Redis)
+    return res.status(201).json({ user: { id: user._id, name: user.name, role: user.role }, accessToken, refreshToken });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Signup failed' });
+    res.status(500).json({ message: "Server error" });
   }
 });
 
-// LOGIN
-router.post('/login', async (req, res) => {
+// Login
+router.post("/login", async (req, res) => {
   try {
-    const { role, email, password } = req.body;
+    const {email, password } = req.body;
+    if (!email || !password) return res.status(400).json({ message: "Missing credentials" });
 
-    let user;
-    if (role === 'farmer') {
-      user = await Farmer.findOne({ email });
-    } else if (role === 'agronomist') {
-      user = await Agronomist.findOne({ email });
-    } else {
-      return res.status(400).json({ message: 'Invalid role type' });
-    }
+    const user = await User.findOne({email });
+    if (!user) return res.status(401).json({ message: "Invalid credentials" });
 
-    if (!user) return res.status(400).json({ message: 'User not found' });
+    const ok = await user.comparePassword(password);
+    if (!ok) return res.status(401).json({ message: "Invalid credentials" });
 
-    const valid = await bcrypt.compare(password, user.passwordHash);
-    if (!valid) return res.status(400).json({ message: 'Invalid credentials' });
+    const accessToken = signAccessToken(user);
+    const refreshToken = signRefreshToken(user);
 
-    const token = jwt.sign({ userId: user._id, role }, process.env.JWT_SECRET, { expiresIn: '7d' });
-    res.json({ token, user, role });
+    // Save refresh token to DB or Redis tied to user for revocation (recommended)
+    return res.json({ accessToken, refreshToken, user: { id: user._id, name: user.name, role: user.role } });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ message: 'Login failed' });
+    res.status(500).json({ message: "Server error" });
   }
+});
+
+// Refresh token endpoint
+router.post("/refresh", async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
+    if (!refreshToken) return res.status(400).json({ message: "No refresh token provided" });
+
+    // verify (and optionally check it exists in DB/Redis)
+    const decoded = verifyRefreshToken(refreshToken);
+    // if verify throws, catch will handle
+    const userId = decoded.sub;
+    const user = await User.findById(userId);
+    if (!user) return res.status(401).json({ message: "User not found" });
+
+    const newAccessToken = signAccessToken(user);
+    const newRefreshToken = signRefreshToken(user);
+    // rotate refresh tokens: store new one, remove old one in DB/Redis
+
+    return res.json({ accessToken: newAccessToken, refreshToken: newRefreshToken });
+  } catch (err) {
+    console.error(err);
+    return res.status(401).json({ message: "Invalid refresh token" });
+  }
+});
+
+// Logout (simple): instruct client to delete tokens, and revoke refresh token server-side
+router.post("/logout", async (req, res) => {
+  const { refreshToken } = req.body;
+  // remove refresh token from DB/Redis so it can't be used again
+  return res.json({ message: "Logged out" });
 });
 
 module.exports = router;

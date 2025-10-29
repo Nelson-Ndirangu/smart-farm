@@ -1,34 +1,32 @@
-// Authentication middleware to protect routes
-const jwt = require('jsonwebtoken');
-const Farmer = require('./models/Farmer');
-const Agronomist = require('./models/Agronomist');
+// Protecting the routes
+const jwt = require("jsonwebtoken");
+const dotenv = require("dotenv");
 
-const authMiddleware = async (req, res, next) => {
+dotenv.config();
+
+export const authenticate = (req, res, next) => {
   try {
+    // Accept "Bearer <token>" in Authorization header
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return res.status(401).json({ message: 'No token provided' });
-    }
+    if (!authHeader) return res.status(401).json({ message: "No token" });
 
-    const token = authHeader.split(' ')[1];
+    const parts = authHeader.split(" ");
+    if (parts.length !== 2 || parts[0] !== "Bearer") return res.status(401).json({ message: "Invalid token format" });
+
+    const token = parts[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-    let user;
-    if (decoded.role === 'farmer') {
-      user = await Farmer.findById(decoded.userId);
-    } else if (decoded.role === 'agronomist') {
-      user = await Agronomist.findById(decoded.userId);
-    }
-
-    if (!user) return res.status(401).json({ message: 'User not found' });
-
-    req.user = user;
-    req.role = decoded.role;
+    // attach user info to request
+    req.user = { id: decoded.sub, role: decoded.role };
     next();
   } catch (err) {
-    console.error('Auth error:', err.message);
-    return res.status(401).json({ message: 'Invalid or expired token' });
+    console.error(err);
+    return res.status(401).json({ message: "Unauthorized" });
   }
-};
+}
 
-module.exports = authMiddleware;
+// Role-based authorization middleware
+export const authorizeRole = (...allowedRoles) => (req, res, next) => {
+  if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+  if (!allowedRoles.includes(req.user.role)) return res.status(403).json({ message: "Forbidden - insufficient role" });
+  next();
+}
