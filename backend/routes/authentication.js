@@ -1,21 +1,21 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const Farmer = require('./models/Farmer');
-const Agronomist = require('./models/Agronomist');
+const Farmer = require('../models/farmer');
+const Agronomist = require('../models/agronomist');
 const router = express.Router();
 
 // SIGNUP
 router.post('/signup', async (req, res) => {
   try {
-    const { role, firstName, lastName, email, phone, password } = req.body;
+    const { role, fullName, email, phone, password } = req.body;
     const passwordHash = await bcrypt.hash(password, 10);
 
     if (role === 'farmer') {
       const existing = await Farmer.findOne({ email });
       if (existing) return res.status(400).json({ message: 'Email already registered' });
 
-      const farmer = await Farmer.create({ firstName, lastName, email, phone, passwordHash });
+      const farmer = await Farmer.create({ fullName, email, phone, passwordHash });
       const token = jwt.sign({ userId: farmer._id, role: 'farmer' }, process.env.JWT_SECRET, { expiresIn: '7d' });
       return res.json({ token, user: farmer, role: 'farmer' });
 

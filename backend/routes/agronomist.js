@@ -39,7 +39,11 @@ router.get('/:id', async (req, res) => {
 // Update an Agronomist by ID
 router.put('/:id', async (req, res) => {
     try {
-        const updatedAgronomist = await Agronomist.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        const updatedAgronomist = await Agronomist.findByIdAndUpdate(
+            req.params.id, 
+            req.body,
+            { new: true } );
+            
         if (!updatedAgronomist) {
             return res.status(404).json({ message: 'Agronomist not found' });
         }   

@@ -4,8 +4,8 @@ const connectDB = require('./configs/db');
 const farmerRoutes = require('./routes/farmerRoute');
 const agronomistRoutes = require('./routes/agronomist');
 const cors = require('cors');
-const { connect } = require('mongoose');
 require('dotenv').config();
+const authRoutes = require('./routes/authentication');
 
 
 const app = express();
@@ -34,6 +34,7 @@ app.get('/', (req, res) => {
 // Routes
 app.use('/api/farmers', farmerRoutes);
 app.use('/api/agronomists', agronomistRoutes);
+app.use('/',authRoutes);
 
 
 

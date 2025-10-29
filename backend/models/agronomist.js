@@ -6,6 +6,10 @@ const AgronomistSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
+    farmers:  
+            [{ 
+                type: mongoose.Schema.Types.ObjectId, ref: "Farmer"
+             }],
     email: {
         type: String,
         required: true,

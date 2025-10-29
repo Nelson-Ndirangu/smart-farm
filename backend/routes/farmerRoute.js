@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const Farmer = require('../models/farmer');
 
+
 // Create a new Farmer
 router.post('/', async (req, res) => {
     try {
