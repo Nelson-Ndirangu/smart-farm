@@ -21,7 +21,7 @@ const PORT = process.env.PORT || 5000;
 // Middleware
 app.use(cors(
     {
-        origin: '*',
+        origin: 'ALLOWED_ORIGINS' ? process.env.ALLOWED_ORIGINS.split(',') : '*',
         methods: ['GET', 'POST', 'PUT', 'DELETE']
     
     }
