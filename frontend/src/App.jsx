@@ -50,6 +50,7 @@ import Consultations from './pages/ConsultationCreate';
 import Subscriptions from '../src/pages/Subscription';
 import NotFound from './pages/NotFound';
 import ProtectedRoute from '../src/components/ui/protectedRoute';
+import './App.css';
 
 export default function App() {
   return (
