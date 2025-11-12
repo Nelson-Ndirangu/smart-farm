@@ -13,11 +13,13 @@ const UserSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true, lowercase: true, trim: true },
   password: { type: String, required: true, minlength: 6, select: false },
   role: { type: String, enum: ['farmer', 'agronomist', 'admin'], default: 'farmer' },
+  category: { type: String, enum: ['organic', 'conventional', 'hydroponic', 'horticulture', 'dairy'], default: 'conventional' },
   profile: {
     bio: String,
     location: String,
     skills: [String]
   },
+  rating: { type: Number, min: 0, max: 5, default: 0 },
   wallet: WalletSchema,
   isVerified: { type: Boolean, default: false },
   refreshTokens: [{ token: String, createdAt: Date }],

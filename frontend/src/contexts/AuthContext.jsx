@@ -1,61 +1,116 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import authService from '../api/authService';
-import api from '../api/api';
-import { useNavigate } from 'react-router-dom';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { authAPI } from '../services/api';
 
 const AuthContext = createContext();
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => {
-    try {
-      return JSON.parse(localStorage.getItem('fc_user') || 'null');
-    } catch {
-      return null;
-    }
-  });
-  const navigate = useNavigate();
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+};
+
+export const AuthProvider = ({ children }) => {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Keep localStorage synced
-    if (user) localStorage.setItem('fc_user', JSON.stringify(user));
-    else localStorage.removeItem('fc_user');
-  }, [user]);
-
-  const login = async (email, password) => {
-    const { token, user: u } = await authService.login({ email, password });
+    const token = localStorage.getItem('token');
     if (token) {
-      setUser(u);
+      verifyToken(token);
+    } else {
+      setLoading(false);
     }
-    return { token, user: u };
+  }, []);
+
+  const verifyToken = async (token) => {
+    try {
+      const response = await authAPI.verify();
+      setUser(response.data.user);
+    } catch (error) {
+      console.error('Token verification failed:', error);
+      localStorage.removeItem('token');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const register = async (payload) => {
-    const res = await authService.register(payload);
-    // backend returns token & user; register route created earlier returns { user, token }
-    if (res.token) localStorage.setItem('fc_token', res.token);
-    if (res.user) setUser(res.user);
-    return res;
+  const login = async (email, password) => {
+    try {
+      const response = await authAPI.login({ email, password });
+      const { user, token } = response.data;
+      
+      localStorage.setItem('token', token);
+      setUser(user);
+      return { success: true };
+    } catch (error) {
+      const message = error.response?.data?.message || error.response?.data?.error || 'Login failed';
+      return { 
+        success: false, 
+        message 
+      };
+    }
+  };
+
+  const register = async (userData) => {
+    try {
+      console.log('Registering user with data:', userData);
+      
+      // Map frontend field names to backend schema
+      const backendUserData = {
+        name: userData.name,
+        email: userData.email,
+        password: userData.password,
+        role: userData.role, // Using 'role' instead of 'userType'
+        phone: userData.phone,
+        profile: {
+          location: userData.location,
+          bio: userData.bio // if you add bio field to register form
+        },
+        category: userData.category || 'conventional' // default category
+      };
+
+      const response = await authAPI.register(backendUserData);
+      const { user, token } = response.data;
+      
+      localStorage.setItem('token', token);
+      setUser(user);
+      return { success: true };
+    } catch (error) {
+      console.error('Registration error:', error.response?.data);
+      const message = error.response?.data?.message || error.response?.data?.error || 'Registration failed';
+      return { 
+        success: false, 
+        message 
+      };
+    }
   };
 
   const logout = () => {
-    authService.logout();
+    localStorage.removeItem('token');
     setUser(null);
-    navigate('/login');
   };
 
-  const fetchProfile = async () => {
-    const res = await api.get('/users/me');
-    setUser(res.data.user);
-    return res.data.user;
+  const updateUser = (updatedUserData) => {
+    setUser(prevUser => ({
+      ...prevUser,
+      ...updatedUserData
+    }));
+  };
+
+  const value = {
+    user,
+    login,
+    register,
+    logout,
+    updateUser,
+    loading
   };
 
   return (
-    <AuthContext.Provider value={{ user, setUser, login, register, logout, fetchProfile }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
-}
-
-export function useAuth() {
-  return useContext(AuthContext);
-}
+};

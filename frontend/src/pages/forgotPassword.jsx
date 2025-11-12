@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Input } from '../components/ui/input';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
-import authService from '../api/authService';
+import authService from '../services/authService';
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('');
