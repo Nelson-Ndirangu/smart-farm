@@ -19,10 +19,10 @@ import { AuthProvider } from './contexts/AuthContext';
 
 createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <BrowserRouter>
+    {/* <BrowserRouter> */}
       <AuthProvider>
         <App />
       </AuthProvider>
-    </BrowserRouter>
+    {/* </BrowserRouter> */}
   </React.StrictMode>
 );

@@ -1,7 +1,9 @@
 // src/pages/Consultations.jsx
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { consultationsAPI } from '../services/api';
+import { chatAPI } from '../services/ChatAPI';
 
 const Consultations = () => {
   const { user } = useAuth();
@@ -9,6 +11,7 @@ const Consultations = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
   const [error, setError] = useState('');
+  const [creatingChat, setCreatingChat] = useState(null);
 
   useEffect(() => {
     fetchConsultations();
@@ -42,6 +45,25 @@ const Consultations = () => {
     } catch (error) {
       console.error('Error updating consultation:', error);
       setError('Failed to update consultation status');
+    }
+  };
+
+  const handleOpenChat = async (consultationId) => {
+    try {
+      setCreatingChat(consultationId);
+      
+      // Get or create chat for this consultation
+      const response = await chatAPI.getOrCreateChat(consultationId);
+      const chat = response.data;
+      
+      // Navigate to chat page with the chat ID
+      window.location.href = `/chat?chat=${chat._id}`;
+      
+    } catch (error) {
+      console.error('Error opening chat:', error);
+      setError('Failed to open chat. Please try again.');
+    } finally {
+      setCreatingChat(null);
     }
   };
 
@@ -87,6 +109,12 @@ const Consultations = () => {
     return consultations.filter(c => c.status === status).length;
   };
 
+  // Check if chat is available for consultation
+  const isChatAvailable = (consultation) => {
+    // Chat is available for paid and confirmed consultations
+    return consultation.status === 'paid' || consultation.status === 'confirmed' || consultation.status === 'completed';
+  };
+
   // Mock data for development
   const getMockConsultations = () => {
     const baseConsultations = [
@@ -130,7 +158,7 @@ const Consultations = () => {
         scheduledAt: null,
         price: 3000,
         currency: 'usd',
-        status: 'completed',
+        status: 'confirmed',
         payment: {
           paymentId: 'pay_124',
           provider: 'stripe',
@@ -290,7 +318,7 @@ const Consultations = () => {
               )}
 
               {/* Action Buttons */}
-              <div className="flex space-x-3 pt-4 border-t">
+              <div className="flex space-x-3 pt-4 border-t flex-wrap gap-2">
                 {user?.role === 'agronomist' && consultation.status === 'pending' && (
                   <>
                     <button
@@ -323,6 +351,27 @@ const Consultations = () => {
                   </button>
                 )}
 
+                {/* Chat Button - Available for paid, confirmed, and completed consultations */}
+                {isChatAvailable(consultation) && (
+                  <button
+                    onClick={() => handleOpenChat(consultation._id)}
+                    disabled={creatingChat === consultation._id}
+                    className="bg-green-500 text-white px-4 py-2 rounded-lg hover:bg-green-600 transition duration-200 text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                  >
+                    {creatingChat === consultation._id ? (
+                      <>
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                        <span>Opening...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>💬</span>
+                        <span>Open Chat</span>
+                      </>
+                    )}
+                  </button>
+                )}
+
                 <button className="border border-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 transition duration-200 text-sm">
                   View Details
                 </button>
@@ -333,6 +382,13 @@ const Consultations = () => {
                   </button>
                 )}
               </div>
+
+              {/* Chat availability notice */}
+              {!isChatAvailable(consultation) && consultation.status === 'pending' && (
+                <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
+                  💬 Chat will be available after payment is confirmed
+                </div>
+              )}
             </div>
           ))}
 
@@ -347,9 +403,12 @@ const Consultations = () => {
                 }
               </p>
               {user?.role === 'farmer' && (
-                <button className="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition duration-200 font-medium">
+                <Link 
+                  to="/agronomists"
+                  className="bg-green-500 text-white px-6 py-3 rounded-lg hover:bg-green-600 transition duration-200 font-medium"
+                >
                   Find Agronomists
-                </button>
+                </Link>
               )}
             </div>
           )}

@@ -13,13 +13,10 @@ const Register = () => {
     phone: '',
     location: '',
     category: 'conventional', 
-    
     bio: '' // new field for agronomists
   });
   const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-
-  const { register } = useAuth();
+  const { register, authLoading } = useAuth(); // Use authLoading from context instead of local state
   const navigate = useNavigate();
 
   const handleChange = (e) => {
@@ -33,38 +30,39 @@ const Register = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
     // Validation
     if (formData.password !== formData.confirmPassword) {
       setError('Passwords do not match');
-      setLoading(false);
       return;
     }
 
     if (formData.password.length < 6) {
       setError('Password must be at least 6 characters long');
-      setLoading(false);
       return;
     }
 
     // Additional validation for agronomists
     if (formData.role === 'agronomist' && !formData.category) {
       setError('Please select your specialization');
-      setLoading(false);
       return;
     }
 
     console.log('Submitting registration form:', formData);
-    const result = await register(formData);
     
-    if (result.success) {
-      navigate('/dashboard');
-    } else {
-      setError(result.message);
+    try {
+      const result = await register(formData);
+      console.log('Registration result:', result);
+      
+      if (result.success) {
+        navigate('/dashboard');
+      } else {
+        setError(result.message);
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      setError('An unexpected error occurred. Please try again.');
     }
-    
-    setLoading(false);
   };
 
   return (
@@ -286,10 +284,17 @@ const Register = () => {
             <div>
               <button
                 type="submit"
-                disabled={loading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
+                disabled={authLoading}
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Creating Account...' : 'Create Account'}
+                {authLoading ? (
+                  <div className="flex items-center">
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                    Creating Account...
+                  </div>
+                ) : (
+                  'Create Account'
+                )}
               </button>
             </div>
 

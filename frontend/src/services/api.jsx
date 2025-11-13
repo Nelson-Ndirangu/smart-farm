@@ -5,10 +5,13 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 
 const api = axios.create({
   baseURL: API_BASE_URL,
+  timeout: 8000, // Reduced from 15000 to 8000ms
+  withCredentials: true,
 });
 
-// Add token to requests
+// Request interceptor
 api.interceptors.request.use((config) => {
+  console.log(`🔄 ${config.method?.toUpperCase()} ${config.url}`);
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
@@ -16,14 +19,32 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle token expiration
+// Response interceptor
 api.interceptors.response.use(
-  (response) => response,
+  (response) => {
+    console.log(`✅ ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`);
+    return response;
+  },
   (error) => {
+    // Don't log timeout errors for better readability
+    if (error.code !== 'ECONNABORTED') {
+      console.error('❌ API Error:', {
+        url: error.config?.url,
+        method: error.config?.method,
+        status: error.response?.status,
+        message: error.message
+      });
+    }
+
     if (error.response?.status === 401) {
       localStorage.removeItem('token');
-      window.location.href = '/login';
+      setTimeout(() => {
+        if (window.location.pathname !== '/login') {
+          window.location.href = '/login';
+        }
+      }, 100);
     }
+    
     return Promise.reject(error);
   }
 );
@@ -34,101 +55,36 @@ export const authAPI = {
   verify: () => api.get('/api/auth/verify'),
 };
 
-// src/services/api.js - Update the usersAPI section
-
 export const usersAPI = {
-  // Get all users and filter for agronomists on the frontend
-  getAllUsers: () => api.get('/api/users').catch(error => {
-    console.warn('Users endpoint not available, using mock data');
-    // Return mock data if endpoint doesn't exist
-    if (error.response?.status === 404)   throw error;
-  }),
-
-  // If you have a specific endpoint for agronomists, use this instead:
-  getAgronomists: () => api.get('/api/users?userType=agronomist').catch(error => {
-    console.warn('Agronomists filter not available, using getAllUsers fallback');
-    return usersAPI.getAllUsers();
-  }),
-
-  getUserStats: () => api.get('/api/users/stats').catch(error => {
-    if (error.response?.status === 404) {
-      return { data: {
-        totalConsultations: 0,
-        pendingConsultations: 0,
-        completedConsultations: 0,
-        subscriptionStatus: 'inactive',
-        hasPaidPlatformFee: false
-      }};
-    }
-    throw error;
-  }),
-
+  getAllUsers: () => api.get('/api/users'),
+  getAgronomists: () => api.get('/api/users?role=agronomist'),
+  getUserStats: () => api.get('/api/users/stats'),
   updateProfile: (userData) => api.patch('/api/users/profile', userData),
 };
 
-
-
-// ConsultationsAPI 
 export const consultationsAPI = {
-  getAll: () => api.get('/api/consultations').then(response => {
-    // Ensure response.data is always an array
-    return {
-      ...response,
-      data: Array.isArray(response.data) ? response.data : []
-    };
-  }).catch(error => {
-    console.warn('Consultations endpoint not available, using empty array');
-    return { data: [] };
-  }),
-  
-  getRecent: () => api.get('/api/consultations?limit=3').then(response => {
-    // Ensure response.data is always an array
-    return {
-      ...response,
-      data: Array.isArray(response.data) ? response.data : []
-    };
-  }).catch(error => {
-    console.warn('Recent consultations endpoint not available, using getAll fallback');
-    return consultationsAPI.getAll().then(response => {
-      const allConsultations = Array.isArray(response.data) ? response.data : [];
-      const recent = allConsultations
-        .sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date))
-        .slice(0, 3);
-      return { data: recent };
-    });
-  }),
-  
+  getAll: () => api.get('/api/consultations'),
+  getRecent: () => api.get('/api/consultations?limit=3'),
   getById: (id) => api.get(`/api/consultations/${id}`),
   create: (consultationData) => api.post('/api/consultations', consultationData),
   update: (id, updateData) => api.patch(`/api/consultations/${id}`, updateData),
   cancel: (id) => api.patch(`/api/consultations/${id}`, { status: 'cancelled' }),
 };
 
-
-// SubscriptionsAPI
 export const subscriptionsAPI = {
-  get: () => api.get('/api/subscriptions').then(response => {
-    return {
-      ...response,
-      data: Array.isArray(response.data) ? response.data : []
-    };
-  }).catch(error => {
-    console.warn('Subscriptions endpoint not available, using empty array');
-    return { data: [] };
-  }),
-  
-  getPayments: () => api.get('/api/subscriptions/payments').then(response => {
-    return {
-      ...response,
-      data: Array.isArray(response.data) ? response.data : []
-    };
-  }).catch(error => {
-    console.warn('Payments endpoint not available, using empty array');
-    return { data: [] };
-  }),
-  
+  get: () => api.get('/api/subscriptions'),
+  getPayments: () => api.get('/api/subscriptions/payments'),
   payPlatformFee: () => api.post('/api/subscriptions/pay-platform-fee'),
   createSubscription: (planId) => api.post('/api/subscriptions', { planId }),
   cancelSubscription: (id) => api.patch(`/api/subscriptions/${id}`, { active: false }),
 };
+
+export const chatAPI = {
+  getChats: () => api.get('/api/chat'),
+  getChat: (chatId) => api.get(`/api/chat/${chatId}`),
+  getOrCreateChat: (consultationId) => api.post(`/api/chat/consultation/${consultationId}`),
+  sendMessage: (chatId, messageData) => api.post(`/api/chat/${chatId}/messages`, messageData),
+  markAsRead: (chatId) => api.patch(`/api/chat/${chatId}/messages/read`),
+};
+
 export default api;
