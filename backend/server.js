@@ -15,15 +15,18 @@ const auth = require('./middleware/authMiddleware');
 const errorHandler = require('./middleware/errorHandler');
 const app = express();
 
+// MongoDB connection
+connectDB();
+
 // Middleware
-app.use(cors());
+app.use(cors({
+  origin: 'http://localhost:5173', // Your Vite frontend
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+}));
+
 app.use(express.json());
-
-// Error handling middleware
-app.use((errorHandler));
-
-// 404 handler
-app.use((auth));
+app.use(express.urlencoded({ extended: true }))
 
 
 // Routes
@@ -33,8 +36,6 @@ app.use('/api/consultations', consultationRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/chat', chatRoutes);
 
-// MongoDB connection
-connectDB();
 
 // Create HTTP server
 const server = http.createServer(app);
@@ -107,7 +108,7 @@ app.set('io', io);
 
 // Basic route
 app.get('/', (req, res) => {
-  res.json({ message: 'Smart Farm API is running!' });
+  res.json({ message: 'Smart Farm API is running!'});
 });
 
 
@@ -115,7 +116,10 @@ app.get('/', (req, res) => {
 const PORT = process.env.PORT || 8000;
 
 server.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });
+
+// Error handling middleware
+app.use((errorHandler));
 
 module.exports = app;

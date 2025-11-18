@@ -67,7 +67,7 @@ const Consultations = () => {
     }
   };
 
-  // Format price from cents to dollars
+  // Format price 
   const formatPrice = (priceInCents) => {
     return (priceInCents / 100).toFixed(2);
   };
@@ -125,8 +125,8 @@ const Consultations = () => {
         topic: 'Crop disease identification',
         description: 'Need help identifying a disease affecting my maize plants',
         scheduledAt: new Date(Date.now() + 2 * 24 * 60 * 60 * 1000),
-        price: 1500,
-        currency: 'usd',
+        price: 150000,
+        currency: 'Kes',
         status: 'pending',
         notes: 'Plants showing yellow spots on leaves',
         createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000)
@@ -139,7 +139,7 @@ const Consultations = () => {
         description: 'Soil testing and fertilizer advice for vegetable garden',
         scheduledAt: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000),
         price: 2000,
-        currency: 'usd',
+        currency: 'kes',
         status: 'paid',
         payment: {
           paymentId: 'pay_123',
@@ -157,7 +157,7 @@ const Consultations = () => {
         description: 'Planning irrigation system for 5-acre farm',
         scheduledAt: null,
         price: 3000,
-        currency: 'usd',
+        currency: 'kes',
         status: 'confirmed',
         payment: {
           paymentId: 'pay_124',
@@ -254,7 +254,7 @@ const Consultations = () => {
                     {getStatusText(consultation.status)}
                   </span>
                   <span className="text-lg font-semibold text-green-600">
-                    ${formatPrice(consultation.price || 0)}
+                    KES{formatPrice(consultation.price || 0)}
                   </span>
                 </div>
               </div>
@@ -386,7 +386,7 @@ const Consultations = () => {
               {/* Chat availability notice */}
               {!isChatAvailable(consultation) && consultation.status === 'pending' && (
                 <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-sm text-yellow-700">
-                  💬 Chat will be available after payment is confirmed
+                   Chat will be available after payment is confirmed
                 </div>
               )}
             </div>

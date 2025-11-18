@@ -115,9 +115,7 @@ export const AuthProvider = ({ children }) => {
         password: userData.password,
         role: userData.role,
         phone: userData.phone,
-        profile: {
-          location: userData.location
-        },
+      
         ...(userData.role === 'agronomist' && {
           category: userData.category,
           profile: {
@@ -127,10 +125,8 @@ export const AuthProvider = ({ children }) => {
         })
       };
 
-      console.log('Sending registration data to backend:', backendUserData);
       
       const response = await authAPI.register(backendUserData);
-      console.log('Registration API response:', response);
       
       if (!response.data) {
         throw new Error('No data received from server');

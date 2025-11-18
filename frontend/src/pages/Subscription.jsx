@@ -92,7 +92,7 @@ const Subscriptions = () => {
     {
       id: 'platform-access',
       name: 'Platform Access',
-      price: 300, // KES 300 in cents
+      price: 360000, // KES 300 in cents
       type: 'one_time',
       duration: '1 year',
       features: [
@@ -106,7 +106,7 @@ const Subscriptions = () => {
     {
       id: 'premium-monthly',
       name: 'Premium Monthly',
-      price: 1000, // KES 1000 in cents
+      price: 30000, // KES 1000 in cents
       type: 'monthly',
       duration: '1 month',
       features: [
@@ -138,8 +138,8 @@ const Subscriptions = () => {
   const getMockPaymentHistory = () => [
     {
       _id: 'pay1',
-      amount: 300,
-      currency: 'usd',
+      amount: 30000,
+      currency: 'kes',
       description: 'Platform Access Fee',
       status: 'completed',
       createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
@@ -169,13 +169,8 @@ const Subscriptions = () => {
           </div>
         )}
 
-        {/* Development Notice */}
-        {subscriptions.length === 0 && (
-          <div className="mb-4 bg-blue-50 border border-blue-200 text-blue-600 px-4 py-3 rounded">
-            <strong>Development Mode:</strong> Showing sample subscription data.
-          </div>
-        )}
-
+        
+        
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">
             Subscriptions & Payments

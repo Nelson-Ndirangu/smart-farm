@@ -52,7 +52,6 @@ const Register = () => {
     
     try {
       const result = await register(formData);
-      console.log('Registration result:', result);
       
       if (result.success) {
         navigate('/dashboard');
@@ -187,7 +186,7 @@ const Register = () => {
                 />
               </div>
             </div>
-
+{/* 
             <div>
               <label htmlFor="location" className="block text-sm font-medium text-gray-700">
                 Location
@@ -202,8 +201,8 @@ const Register = () => {
                   className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md placeholder-gray-400 focus:outline-none focus:ring-green-500 focus:border-green-500"
                   placeholder="Enter your location"
                 />
-              </div>
-            </div>
+              </div> */}
+            {/* </div> */}
 
             {/* Bio for Agronomists */}
             {formData.role === 'agronomist' && (

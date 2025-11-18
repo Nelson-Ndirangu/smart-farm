@@ -5,7 +5,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000
 
 const api = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 8000, // Reduced from 15000 to 8000ms
+  timeout: 30000, // Reduced from 15000 to 8000ms
   withCredentials: true,
 });
 
@@ -22,7 +22,7 @@ api.interceptors.request.use((config) => {
 // Response interceptor
 api.interceptors.response.use(
   (response) => {
-    console.log(`✅ ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`);
+    console.log(` ${response.status} ${response.config.method?.toUpperCase()} ${response.config.url}`);
     return response;
   },
   (error) => {
@@ -56,8 +56,7 @@ export const authAPI = {
 };
 
 export const usersAPI = {
-  getAllUsers: () => api.get('/api/users'),
-  getAgronomists: () => api.get('/api/users?role=agronomist'),
+  getAgronomists: () => api.get('/api/users/search/agronomists'),
   getUserStats: () => api.get('/api/users/stats'),
   updateProfile: (userData) => api.patch('/api/users/profile', userData),
 };
