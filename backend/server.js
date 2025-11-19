@@ -11,7 +11,6 @@ const userRoutes = require('./routes/userRoutes');
 const consultationRoutes = require('./routes/consultationRoutes');
 const subscriptionRoutes = require('../backend/routes/subsciptionRoutes');
 const chatRoutes = require('./routes/chatRoutes');
-const auth = require('./middleware/authMiddleware');
 const errorHandler = require('./middleware/errorHandler');
 const app = express();
 
@@ -52,7 +51,7 @@ const io = socketIo(server, {
 const connectedUsers = new Map();
 
 io.on('connection', (socket) => {
-  console.log('User connected:', socket.id);
+  console.log('User:  ', socket.id, ' is connected to the server' );
 
   // User joins with their user ID
   socket.on('join', (userId) => {
@@ -112,7 +111,7 @@ app.get('/', (req, res) => {
   res.json({ message: 'Smart Farm API is running!' });
 });
 
-// Error handling middleware - AFTER routes, BEFORE server.listen
+// Error handling middleware
 app.use(errorHandler);
 
 const PORT = process.env.PORT || 8000;

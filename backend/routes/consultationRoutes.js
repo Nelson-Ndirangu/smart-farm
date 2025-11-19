@@ -2,12 +2,13 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const consultationController = require('../controllers/consultationController');
+const userController = require('../controllers/userController');
 
 // create consultation request (farmer)
 router.post('/', auth('farmer'), consultationController.createConsultationRequest);
 
-// mock payment endpoint to mark paid (dev)
-router.post('/:consultationId/pay/mock', auth('farmer'), consultationController.handleMockPayment);
+// Get agronomists by ID
+router.get('/search/agronomists', userController.searchAgronomists);
 
 // Post consultaton details 
 router.post("/", auth, async (req, res) => {
@@ -18,7 +19,7 @@ router.post("/", auth, async (req, res) => {
       topic: req.body.topic,
       description: req.body.description,
       price: req.body.price,
-      status: "confirmed", // <-- IMPORTANT
+      status: "confirmed",
       scheduledAt: req.body.scheduledAt || null
     });
 

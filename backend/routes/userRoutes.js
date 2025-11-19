@@ -1,11 +1,15 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
-const userController = require('../controllers/userControllers');
+const userController = require('../controllers/userController');
 
 router.get('/me', auth(), userController.getProfile);
-router.put('/me', auth(), userController.updateProfile);
 router.get('/search/agronomists', userController.searchAgronomists);
-router.post('/withdraw', auth(['agronomist']), userController.withdraw);
+router.put('/me', auth(), userController.updateProfile);
+router.get('/:id', userController.getUserById);
+
+router.get('/test', (req, res) => res.json({ ok: true }));
+
+
 
 module.exports = router;

@@ -15,6 +15,19 @@ exports.searchAgronomists = async (req, res) => {
   res.json({ results: ags });
 };
 
+exports.getUserById = async (req, res) => {
+  try {
+    const user = await User.findById(req.params.id).select('-password -refreshTokens');
+    if (!user) return res.status(404).json({ message: 'User not found' });
+
+    res.json(user);
+  } catch (error) {
+    res.status(500).json({ message: 'Server error' });
+  }
+};
+
+
+
 // Admin or agronomist endpoints to manage profile or withdraw
 exports.updateProfile = async (req, res) => {
   const updates = req.body;

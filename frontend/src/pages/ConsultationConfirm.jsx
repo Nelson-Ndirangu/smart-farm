@@ -3,8 +3,6 @@ import { useParams, useNavigate } from 'react-router-dom';
 
 const ConsultationConfirm = () => {
     const { consultationId } = useParams();
-//   Adding agronomist Name
-    const { agronomistName } = useParams();
     const navigate = useNavigate();
 
   return (
@@ -17,7 +15,7 @@ const ConsultationConfirm = () => {
           </h1>
 
           <p className="text-gray-600 mb-6">
-            Thank you for adding a consulation. {agronomistName} will reach out to you soon.
+            Thank you for adding a consulation. {agronomistId} will reach out to you soon.
           </p>
 
           <div className="bg-gray-100 border border-gray-200 rounded-lg p-4">
