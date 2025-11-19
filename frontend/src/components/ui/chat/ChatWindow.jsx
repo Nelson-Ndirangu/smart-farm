@@ -6,61 +6,84 @@ import { chatAPI } from '../../../services/ChatAPI';
 
 const ChatWindow = ({ chat }) => {
   const { user } = useAuth();
-  const { messages, setMessages, socket, typingUsers, sendTypingIndicator } = useChat();
+  const {
+    messages,
+    setMessages,
+    socket,
+    typingUsers,
+    sendTypingIndicator,
+    joinChat,
+    leaveChat
+  } = useChat();
+
   const [newMessage, setNewMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const messagesEndRef = useRef(null);
 
   const otherParticipant = chat.participants.find(p => p._id !== user._id);
 
+  // Join chat safely when both chat and socket are ready
   useEffect(() => {
-    if (chat) {
-      fetchMessages();
-      socket?.emit('joinChat', chat._id);
-    }
+    let joined = false;
 
-    return () => {
-      if (chat) {
-        socket?.emit('leaveChat', chat._id);
+    const tryJoin = () => {
+      const s = socket;
+      if (!chat || !chat._id || !s) return;
+      if (s.connected) {
+        s.emit('joinChat', chat._id);
+        joined = true;
+      } else {
+        // wait for connect once
+        const onConnect = () => {
+          s.emit('joinChat', chat._id);
+          s.off('connect', onConnect);
+          joined = true;
+        };
+        s.on('connect', onConnect);
       }
     };
-  }, [chat?._id]);
+
+    tryJoin();
+
+    // fetch messages for this chat
+    const fetchMessages = async () => {
+      try {
+        const res = await chatAPI.getChat(chat._id);
+        setMessages(res.data.messages || []);
+        await chatAPI.markAsRead(chat._id);
+      } catch (err) {
+        console.error('fetch messages', err);
+      }
+    };
+    fetchMessages();
+
+    return () => {
+      try {
+        if (socket && chat && chat._id) {
+          socket.emit('leaveChat', chat._id);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chat?._id, socket]);
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const fetchMessages = async () => {
-    try {
-      const response = await chatAPI.getChat(chat._id);
-      setMessages(response.data.messages || []);
-      
-      // Mark messages as read
-      await chatAPI.markAsRead(chat._id);
-    } catch (error) {
-      console.error('Error fetching messages:', error);
-    }
-  };
-
-  const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  };
+  }, [messages]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
-    
     if (!newMessage.trim()) return;
 
     try {
-      const messageData = {
-        content: newMessage.trim(),
-        messageType: 'text'
-      };
-
+      const messageData = { content: newMessage.trim(), messageType: 'text' };
       await chatAPI.sendMessage(chat._id, messageData);
       setNewMessage('');
       setIsTyping(false);
       sendTypingIndicator(chat._id, false);
+      // rely on server to emit newMessage and ChatContext to append it
     } catch (error) {
       console.error('Error sending message:', error);
     }
@@ -72,12 +95,7 @@ const ChatWindow = ({ chat }) => {
       sendTypingIndicator(chat._id, true);
     }
 
-    // Clear previous timeout
-    if (window.typingTimeout) {
-      clearTimeout(window.typingTimeout);
-    }
-
-    // Set new timeout
+    if (window.typingTimeout) clearTimeout(window.typingTimeout);
     window.typingTimeout = setTimeout(() => {
       setIsTyping(false);
       sendTypingIndicator(chat._id, false);
@@ -89,16 +107,11 @@ const ChatWindow = ({ chat }) => {
     return typingUserIds.some(id => id !== user._id);
   };
 
-  const formatTime = (date) => {
-    return new Date(date).toLocaleTimeString([], { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    });
-  };
+  const formatTime = (date) => new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
   return (
     <div className="flex flex-col h-full bg-white rounded-lg shadow-sm border">
-      {/* Chat Header */}
+      {/* Header */}
       <div className="p-4 border-b bg-white rounded-t-lg">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3">
@@ -119,7 +132,7 @@ const ChatWindow = ({ chat }) => {
         </div>
       </div>
 
-      {/* Messages Area */}
+      {/* Messages */}
       <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
         {messages.length === 0 ? (
           <div className="text-center py-8">
@@ -129,23 +142,10 @@ const ChatWindow = ({ chat }) => {
           </div>
         ) : (
           messages.map((message) => (
-            <div
-              key={message._id}
-              className={`flex ${message.sender._id === user._id ? 'justify-end' : 'justify-start'}`}
-            >
-              <div
-                className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                  message.sender._id === user._id
-                    ? 'bg-green-500 text-white rounded-br-none'
-                    : 'bg-white text-gray-900 border rounded-bl-none'
-                }`}
-              >
+            <div key={message._id} className={`flex ${message.sender._id === user._id ? 'justify-end' : 'justify-start'}`}>
+              <div className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${message.sender._id === user._id ? 'bg-green-500 text-white rounded-br-none' : 'bg-white text-gray-900 border rounded-bl-none'}`}>
                 <p className="text-sm">{message.content}</p>
-                <p
-                  className={`text-xs mt-1 ${
-                    message.sender._id === user._id ? 'text-green-100' : 'text-gray-500'
-                  }`}
-                >
+                <p className={`text-xs mt-1 ${message.sender._id === user._id ? 'text-green-100' : 'text-gray-500'}`}>
                   {formatTime(message.createdAt)}
                 </p>
               </div>
@@ -153,7 +153,6 @@ const ChatWindow = ({ chat }) => {
           ))
         )}
 
-        {/* Typing Indicator */}
         {isUserTyping() && (
           <div className="flex justify-start">
             <div className="bg-white border rounded-lg rounded-bl-none px-4 py-2">
@@ -169,24 +168,17 @@ const ChatWindow = ({ chat }) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Message Input */}
+      {/* Input */}
       <form onSubmit={handleSendMessage} className="p-4 border-t bg-white">
         <div className="flex space-x-3">
           <input
             type="text"
             value={newMessage}
-            onChange={(e) => {
-              setNewMessage(e.target.value);
-              handleTyping();
-            }}
+            onChange={(e) => { setNewMessage(e.target.value); handleTyping(); }}
             placeholder="Type your message..."
             className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
           />
-          <button
-            type="submit"
-            disabled={!newMessage.trim()}
-            className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
+          <button type="submit" disabled={!newMessage.trim()} className="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 focus:outline-none focus:ring-2 focus:ring-green-500 disabled:opacity-50 disabled:cursor-not-allowed">
             Send
           </button>
         </div>

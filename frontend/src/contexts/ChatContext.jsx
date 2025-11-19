@@ -1,5 +1,5 @@
 // src/contexts/ChatContext.jsx
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useRef } from 'react';
 import { useAuth } from './AuthContext';
 import { chatAPI } from '../services/ChatAPI';
 import { socketService } from '../services/socket';
@@ -8,9 +8,7 @@ const ChatContext = createContext();
 
 export const useChat = () => {
   const context = useContext(ChatContext);
-  if (!context) {
-    throw new Error('useChat must be used within a ChatProvider');
-  }
+  if (!context) throw new Error('useChat must be used within a ChatProvider');
   return context;
 };
 
@@ -23,89 +21,102 @@ export const ChatProvider = ({ children }) => {
   const [typingUsers, setTypingUsers] = useState(new Set());
   const [loading, setLoading] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const socketRef = useRef(null);
 
   useEffect(() => {
+    // initialize socket once
+    const socket = socketService.connect();
+    socketRef.current = socket;
+
+    // When user becomes available, identify user to server
     if (user) {
-      // Initialize socket connection
-      socketService.connect();
       socketService.joinUser(user._id);
+    }
 
-      // Set up socket event listeners
-      socketService.on('newMessage', handleNewMessage);
-      socketService.on('userTyping', handleUserTyping);
-      socketService.on('userOnline', handleUserOnline);
-      socketService.on('userOffline', handleUserOffline);
-      socketService.on('messageDelivered', handleMessageDelivered);
+    // Register listeners
+    const onConnect = (id) => {
+      console.log('chatcontext: socket connected', id);
+      // join user again in case of reconnection
+      if (user) socketService.joinUser(user._id);
+    };
 
-      // Load initial chats
+    const onNewMessage = (message) => {
+      // if the message belongs to the currently open chat append it
+      setMessages(prev => {
+        // avoid duplicates
+        if (prev.some(m => String(m._id) === String(message._id))) return prev;
+        return [...prev, message];
+      });
+
+      // update chat list lastMessage
+      setChats(prev => prev.map(c => c._id === String(message.chat) || c._id === String(message.chatId) ? { ...c, lastMessage: message, updatedAt: new Date() } : c));
+      // update unread count if message from someone else
+      if (message.sender && message.sender._id !== user?._id) {
+        setUnreadCount(prev => prev + 1);
+      }
+    };
+
+    const onUserTyping = (data) => {
+      setTypingUsers(prev => {
+        const s = new Set(prev);
+        if (data.isTyping) s.add(data.userId);
+        else s.delete(data.userId);
+        return s;
+      });
+    };
+
+    const onUserOnline = (userId) => {
+      setOnlineUsers(prev => new Set(prev).add(userId));
+    };
+
+    const onUserOffline = (userId) => {
+      setOnlineUsers(prev => {
+        const s = new Set(prev);
+        s.delete(userId);
+        return s;
+      });
+    };
+
+    const onDisconnect = () => {
+      console.log('chatcontext: socket disconnected');
+    };
+
+    socketService.on('connect', onConnect);
+    socketService.on('newMessage', onNewMessage);
+    socketService.on('userTyping', onUserTyping);
+    socketService.on('userOnline', onUserOnline);
+    socketService.on('userOffline', onUserOffline);
+    socketService.on('disconnect', onDisconnect);
+
+    // load initial chats if user
+    if (user) {
       fetchChats();
       fetchUnreadCount();
-
-      return () => {
-        // Clean up socket listeners
-        socketService.off('newMessage', handleNewMessage);
-        socketService.off('userTyping', handleUserTyping);
-        socketService.off('userOnline', handleUserOnline);
-        socketService.off('userOffline', handleUserOffline);
-        socketService.off('messageDelivered', handleMessageDelivered);
-        
-        socketService.disconnect();
-      };
     }
+
+    return () => {
+      socketService.off('connect', onConnect);
+      socketService.off('newMessage', onNewMessage);
+      socketService.off('userTyping', onUserTyping);
+      socketService.off('userOnline', onUserOnline);
+      socketService.off('userOffline', onUserOffline);
+      socketService.off('disconnect', onDisconnect);
+
+      // Do not fully disconnect socket here if other parts of app still need it.
+      // Only clear event callbacks we registered above.
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
-
-  const handleNewMessage = (message) => {
-    setMessages(prev => [...prev, message]);
-    
-    // Update chats list with new last message
-    setChats(prev => prev.map(chat => 
-      chat._id === message.chatId 
-        ? { ...chat, lastMessage: message, updatedAt: new Date() }
-        : chat
-    ));
-
-    // Update unread count
-    if (message.sender._id !== user._id) {
-      setUnreadCount(prev => prev + 1);
-    }
-  };
-
-  const handleUserTyping = (data) => {
-    if (data.isTyping) {
-      setTypingUsers(prev => new Set(prev).add(data.userId));
-    } else {
-      setTypingUsers(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(data.userId);
-        return newSet;
-      });
-    }
-  };
-
-  const handleUserOnline = (userId) => {
-    setOnlineUsers(prev => new Set(prev).add(userId));
-  };
-
-  const handleUserOffline = (userId) => {
-    setOnlineUsers(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(userId);
-      return newSet;
-    });
-  };
-
-  const handleMessageDelivered = (data) => {
-    // Update message delivery status if needed
-    console.log('Message delivered:', data);
-  };
 
   const fetchChats = async () => {
     try {
       setLoading(true);
-      const response = await chatAPI.getChats();
-      setChats(response.data);
-    } catch (error) {
-      console.error('Error fetching chats:', error);
+      const res = await chatAPI.getChats();
+      // API returns array of chats
+      const results = Array.isArray(res.data) ? res.data : res.data?.chats || [];
+      setChats(results);
+    } catch (err) {
+      console.error('fetchChats error', err);
     } finally {
       setLoading(false);
     }
@@ -113,42 +124,37 @@ export const ChatProvider = ({ children }) => {
 
   const fetchUnreadCount = async () => {
     try {
-      const response = await chatAPI.getUnreadCount();
-      setUnreadCount(response.data.count || 0);
-    } catch (error) {
-      console.error('Error fetching unread count:', error);
+      const res = await chatAPI.getUnreadCount();
+      setUnreadCount(res.data?.count || 0);
+    } catch (err) {
+      console.error('fetchUnreadCount error', err);
     }
   };
 
   const fetchChatMessages = async (chatId) => {
     try {
-      const response = await chatAPI.getChat(chatId);
-      setMessages(response.data.messages || []);
-      
-      // Mark messages as read
+      const res = await chatAPI.getChat(chatId);
+      const msgs = res.data.messages || [];
+      setMessages(msgs);
       await chatAPI.markAsRead(chatId);
-      
-      // Update unread count
       fetchUnreadCount();
-    } catch (error) {
-      console.error('Error fetching chat messages:', error);
-      throw error;
+      setActiveChat(chats.find(c => String(c._id) === String(chatId)) || null);
+    } catch (err) {
+      console.error('fetchChatMessages', err);
+      throw err;
     }
   };
 
   const sendMessage = async (chatId, content, messageType = 'text', fileUrl = null) => {
     try {
-      const messageData = {
-        content,
-        messageType,
-        fileUrl
-      };
-
-      const response = await chatAPI.sendMessage(chatId, messageData);
-      return response.data;
-    } catch (error) {
-      console.error('Error sending message:', error);
-      throw error;
+      const messageData = { content, messageType, fileUrl };
+      const res = await chatAPI.sendMessage(chatId, messageData);
+      // server emits newMessage; but optimistic update for speed:
+      // setMessages(prev => [...prev, res.data]);
+      return res.data;
+    } catch (err) {
+      console.error('sendMessage error', err);
+      throw err;
     }
   };
 
@@ -164,18 +170,7 @@ export const ChatProvider = ({ children }) => {
     socketService.sendTyping(chatId, isTyping);
   };
 
-  const createChatForConsultation = async (consultationId) => {
-    try {
-      const response = await chatAPI.getOrCreateChat(consultationId);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating chat:', error);
-      throw error;
-    }
-  };
-
   const value = {
-    // State
     chats,
     activeChat,
     messages,
@@ -183,29 +178,18 @@ export const ChatProvider = ({ children }) => {
     typingUsers,
     loading,
     unreadCount,
-    
-    // Setters
     setActiveChat,
     setMessages,
     setLoading,
-    
-    // Actions
     fetchChats,
     fetchChatMessages,
     sendMessage,
     joinChat,
     leaveChat,
     sendTypingIndicator,
-    createChatForConsultation,
-    refreshUnreadCount: fetchUnreadCount,
-    
-    // Socket status
     isSocketConnected: socketService.getConnectionStatus(),
+    socket: socketRef.current // direct socket for components that need it
   };
 
-  return (
-    <ChatContext.Provider value={value}>
-      {children}
-    </ChatContext.Provider>
-  );
+  return <ChatContext.Provider value={value}>{children}</ChatContext.Provider>;
 };

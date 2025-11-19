@@ -9,6 +9,8 @@ import Register from './pages/Register';
 import Agronomists from './pages/Agronomist';
 import Dashboard from './pages/Dashboard';
 import BookConsultation from './pages/BookConsultation';
+import Consultations from './pages/Consultations';
+import ConsultationConfirm from './pages/ConsultationConfirm';
 import Subscriptions from './pages/Subscription';
 import Chat from './pages/Chat';
 import { ChatProvider } from './contexts/ChatContext';
@@ -31,6 +33,8 @@ function App() {
               <Route path="/register" element={<Register />} />
               <Route path="/agronomists" element={<ProtectedRoute><Agronomists /></ProtectedRoute>} />
               <Route path="/consultation/book/:agronomistId" element={<ProtectedRoute><BookConsultation /></ProtectedRoute>}/>
+              <Route path="/consultations" element={<ProtectedRoute><Consultations /></ProtectedRoute>} />
+              <Route path="/consultations/confirm/:consultationId" element={ <ProtectedRoute><ConsultationConfirm /></ProtectedRoute>}/>
               <Route path="/subscriptions" element={<ProtectedRoute><Subscriptions /></ProtectedRoute>} />
               <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
               <Route path="/chat" element={<ProtectedRoute><Chat /></ProtectedRoute>} />

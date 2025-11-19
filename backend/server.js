@@ -20,14 +20,13 @@ connectDB();
 
 // Middleware
 app.use(cors({
-  origin: 'http://localhost:5173', // Your Vite frontend
+  origin: process.env.FRONTEND_URL || 'http://localhost:5173',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
 }));
 
 app.use(express.json());
-app.use(express.urlencoded({ extended: true }))
-
+app.use(express.urlencoded({ extended: true }));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -36,15 +35,16 @@ app.use('/api/consultations', consultationRoutes);
 app.use('/api/subscriptions', subscriptionRoutes);
 app.use('/api/chat', chatRoutes);
 
-
 // Create HTTP server
 const server = http.createServer(app);
 
-// Socket.io setup
+// Socket.io setup (improved CORS)
 const io = socketIo(server, {
   cors: {
     origin: process.env.FRONTEND_URL || "http://localhost:5173",
-    methods: ["GET", "POST"]
+    credentials: true,
+    methods: ["GET", "POST", "OPTIONS"],
+    allowedHeaders: ["*"]
   }
 });
 
@@ -56,28 +56,30 @@ io.on('connection', (socket) => {
 
   // User joins with their user ID
   socket.on('join', (userId) => {
+    if (!userId) return;
     connectedUsers.set(userId, socket.id);
     socket.userId = userId;
     console.log(`User ${userId} joined with socket ${socket.id}`);
-    
-    // Notify others that this user is online
     socket.broadcast.emit('userOnline', userId);
   });
 
   // Join specific chat room
   socket.on('joinChat', (chatId) => {
+    if (!chatId) return;
     socket.join(chatId);
     console.log(`User ${socket.userId} joined chat ${chatId}`);
   });
 
   // Leave chat room
   socket.on('leaveChat', (chatId) => {
+    if (!chatId) return;
     socket.leave(chatId);
     console.log(`User ${socket.userId} left chat ${chatId}`);
   });
 
   // Handle typing indicators
   socket.on('typing', (data) => {
+    if (!data || !data.chatId) return;
     socket.to(data.chatId).emit('userTyping', {
       userId: socket.userId,
       isTyping: data.isTyping
@@ -86,6 +88,7 @@ io.on('connection', (socket) => {
 
   // Handle message delivery status
   socket.on('messageDelivered', (data) => {
+    if (!data || !data.chatId) return;
     socket.to(data.chatId).emit('messageDelivered', {
       messageId: data.messageId,
       deliveredTo: socket.userId
@@ -94,10 +97,8 @@ io.on('connection', (socket) => {
 
   socket.on('disconnect', () => {
     console.log('User disconnected:', socket.id);
-    
     if (socket.userId) {
       connectedUsers.delete(socket.userId);
-      // Notify others that this user went offline
       socket.broadcast.emit('userOffline', socket.userId);
     }
   });
@@ -108,18 +109,16 @@ app.set('io', io);
 
 // Basic route
 app.get('/', (req, res) => {
-  res.json({ message: 'Smart Farm API is running!'});
+  res.json({ message: 'Smart Farm API is running!' });
 });
 
-
+// Error handling middleware - AFTER routes, BEFORE server.listen
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 8000;
 
 server.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
-
-// Error handling middleware
-app.use((errorHandler));
 
 module.exports = app;

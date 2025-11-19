@@ -281,7 +281,7 @@ const Dashboard = () => {
                   to="/consultations"
                   className="flex items-center p-3 border rounded-lg hover:bg-gray-50 transition duration-200"
                 >
-                  <span className="text-xl mr-3">📋</span>
+                  <span className="text-xl mr-3"></span>
                   <div>
                     <p className="font-medium text-gray-900">My Consultations</p>
                     <p className="text-sm text-gray-500">Manage your schedule</p>
@@ -297,7 +297,7 @@ const Dashboard = () => {
           <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-6 mb-8">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <span className="text-yellow-400 text-2xl">💰</span>
+                <span className="text-yellow-400 text-2xl"></span>
               </div>
               <div className="ml-4">
                 <h3 className="text-lg font-medium text-yellow-800">

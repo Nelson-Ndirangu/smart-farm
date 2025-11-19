@@ -48,7 +48,7 @@ const Home = () => {
 
           {/* Platform Fee Badge */}
           <div className="inline-flex items-center bg-yellow-100 text-yellow-800 px-6 py-3 rounded-full font-medium">
-            <span className="mr-2">💰</span>
+            <span className="mr-2"></span>
             Platform Access Fee: KES 300
           </div>
         </div>
@@ -64,17 +64,17 @@ const Home = () => {
           <div className="grid md:grid-cols-3 gap-8">
             {[
               {
-                icon: '👤',
+                icon: '',
                 title: 'Sign Up',
                 description: 'Create your account as a farmer or agronomist'
               },
               {
-                icon: '💳',
+                icon: '',
                 title: 'Pay Platform Fee',
                 description: 'KES 300 one-time access fee for farmers'
               },
               {
-                icon: '💬',
+                icon: '',
                 title: 'Start Consulting',
                 description: 'Connect with agronomists and get expert advice'
               }

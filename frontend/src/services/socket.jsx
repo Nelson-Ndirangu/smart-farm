@@ -13,14 +13,18 @@ class SocketService {
       return this.socket;
     }
 
-    const SOCKET_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
-    
+    // Prefer an explicit socket URL; fallback to API base without trailing '/api'
+    const rawApi = import.meta.env.VITE_SOCKET_URL || import.meta.env.VITE_API_BASE_URL || 'http://localhost:8000';
+    // remove trailing '/api' or trailing slash if present to avoid connecting to /api
+    const SOCKET_URL = rawApi.replace(/\/api\/?$/, '').replace(/\/$/, '');
+
     this.socket = io(SOCKET_URL, {
       withCredentials: true,
       autoConnect: true,
       reconnection: true,
-      reconnectionAttempts: 5,
+      reconnectionAttempts: 10,
       reconnectionDelay: 1000,
+      transports: ['websocket', 'polling'],
     });
 
     this.setupEventListeners();
@@ -72,10 +76,17 @@ class SocketService {
     });
   }
 
-  // Join a chat room
+  // Join a chat room (safely emit)
   joinChat(chatId) {
     if (this.socket && this.isConnected) {
       this.socket.emit('joinChat', chatId);
+    } else if (this.socket) {
+      // wait for connect then join
+      const onConnect = () => {
+        this.socket.emit('joinChat', chatId);
+        this.off('connect', onConnect);
+      };
+      this.on('connect', onConnect);
     }
   }
 
@@ -83,13 +94,26 @@ class SocketService {
   leaveChat(chatId) {
     if (this.socket && this.isConnected) {
       this.socket.emit('leaveChat', chatId);
+    } else if (this.socket) {
+      const onConnect = () => {
+        this.socket.emit('leaveChat', chatId);
+        this.off('connect', onConnect);
+      };
+      this.on('connect', onConnect);
     }
   }
 
   // Join with user ID
   joinUser(userId) {
+    if (!userId) return;
     if (this.socket && this.isConnected) {
       this.socket.emit('join', userId);
+    } else if (this.socket) {
+      const onConnect = () => {
+        this.socket.emit('join', userId);
+        this.off('connect', onConnect);
+      };
+      this.on('connect', onConnect);
     }
   }
 
@@ -142,7 +166,11 @@ class SocketService {
   // Disconnect socket
   disconnect() {
     if (this.socket) {
-      this.socket.disconnect();
+      try {
+        this.socket.disconnect();
+      } catch (e) {
+        console.warn('Error while disconnecting socket', e);
+      }
       this.socket = null;
       this.isConnected = false;
       this.eventCallbacks.clear();
@@ -162,3 +190,4 @@ class SocketService {
 
 // Create a singleton instance
 export const socketService = new SocketService();
+export default socketService;

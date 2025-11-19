@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { usersAPI } from '../services/api';
+import { Link } from 'react-router-dom';
 
 const Agronomists = () => {
   const [agronomists, setAgronomists] = useState([]);
@@ -129,7 +130,7 @@ const Agronomists = () => {
                     {formatCategory(a.profile?.category || 'Agronomist')} Specialist
                   </p>
                   <p className="text-sm text-gray-500">
-                    {a.profile?.location ? `📍 ${a.profile.location}` : ''}
+                    {a.profile?.location ? ` ${a.profile.location}` : ''}
                   </p>
                 </div>
               </div>
@@ -154,9 +155,15 @@ const Agronomists = () => {
                 </div>
               )}
 
-              <button className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition duration-200 font-medium">
-                Book Consultation
-              </button>
+             <Link
+                  to={`/consultation/book/${a._id}`}
+                  className="w-full block text-center bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition duration-200 font-medium"
+                >
+                  Book Consultation
+              </Link>
+
+
+
             </div>
           ))}
         </div>
