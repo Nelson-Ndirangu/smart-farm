@@ -38,13 +38,11 @@ const BookConsultation = () => {
     try {
       // Create new consultation
       const consultationData = {
-        farmer: user._id,
         agronomist: agronomist._id,
         topic: `Consultation with ${agronomist.name}`,
-        description: '',
-        price: 0, // set default or add form input
-        status: 'pending',
-      };
+        description: ''
+        // price: 0 // set default or add form input
+        };
 
       const res = await consultationsAPI.create(consultationData);
       const consultation = res.data;

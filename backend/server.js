@@ -9,7 +9,7 @@ dotenv.config();
 const authRoutes = require('./routes/authRoutes');
 const userRoutes = require('./routes/userRoutes');
 const consultationRoutes = require('./routes/consultationRoutes');
-const subscriptionRoutes = require('../backend/routes/subsciptionRoutes');
+const subscriptionRoutes = require('./routes/subsciptionRoutes');
 const chatRoutes = require('./routes/chatRoutes');
 const errorHandler = require('./middleware/errorHandler');
 const app = express();
