@@ -12,10 +12,18 @@ router.get('/', auth, async (req, res) => {
       participants: req.user.id,
       isActive: true
     })
-    .populate('participants', 'name role profile')
-    .populate('consultation', 'topic status price')
-    .populate('lastMessage')
-    .sort({ updatedAt: -1 });
+      .populate('participants', 'name role profile')
+      .populate('consultation', 'topic status price')
+      
+      .sort({ updatedAt: -1 })
+      .lean();
+
+    // manually attach lastMessage
+    chats.forEach(chat => {
+      if (chat.messages && chat.messages.length > 0) {
+        chat.lastMessage = chat.messages[chat.messages.length - 1];
+      }
+    });
 
     res.json(chats);
   } catch (error) {
@@ -23,28 +31,35 @@ router.get('/', auth, async (req, res) => {
   }
 });
 
+
 // Get specific chat
 router.get('/:chatId', auth, async (req, res) => {
   try {
     const chat = await Chat.findById(req.params.chatId)
       .populate('participants', 'name role profile')
       .populate('consultation', 'topic status price')
-      .populate('messages.sender', 'name role profile');
+      .lean();
 
     if (!chat) {
       return res.status(404).json({ error: 'Chat not found' });
     }
 
-    // Check if user is participant
     if (!chat.participants.some(p => p._id.toString() === req.user.id)) {
       return res.status(403).json({ error: 'Access denied' });
     }
+
+    // manually populate sender fields in messages
+    await Chat.populate(chat, {
+      path: "messages.sender",
+      select: "name role profile"
+    });
 
     res.json(chat);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
+
 
 // Get or create chat for consultation
 router.post('/consultation/:consultationId', auth, async (req, res) => {
@@ -57,13 +72,11 @@ router.post('/consultation/:consultationId', auth, async (req, res) => {
       return res.status(404).json({ error: 'Consultation not found' });
     }
 
-    // Check if user is part of consultation
-    if (consultation.farmer._id.toString() !== req.user.id && 
+    if (consultation.farmer._id.toString() !== req.user.id &&
         consultation.agronomist._id.toString() !== req.user.id) {
       return res.status(403).json({ error: 'Access denied' });
     }
 
-    // Find existing chat or create new one
     let chat = await Chat.findOne({
       consultation: consultation._id,
       isActive: true
@@ -78,27 +91,28 @@ router.post('/consultation/:consultationId', auth, async (req, res) => {
       await chat.save();
     }
 
-    await chat.populate('participants', 'name role profile');
-    await chat.populate('consultation', 'topic status price');
+    const populatedChat = await Chat.findById(chat._id)
+      .populate('participants', 'name role profile')
+      .populate('consultation', 'topic status price')
+      .lean();
 
-    res.json(chat);
+    res.json(populatedChat);
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
+
 // Send message
 router.post('/:chatId/messages', auth, async (req, res) => {
   try {
     const { content, messageType = 'text', fileUrl } = req.body;
-    
     const chat = await Chat.findById(req.params.chatId);
-    
+
     if (!chat) {
       return res.status(404).json({ error: 'Chat not found' });
     }
 
-    // Check if user is participant
     if (!chat.participants.some(p => p.toString() === req.user.id)) {
       return res.status(403).json({ error: 'Access denied' });
     }
@@ -112,17 +126,20 @@ router.post('/:chatId/messages', auth, async (req, res) => {
     };
 
     chat.messages.push(message);
-    chat.lastMessage = chat.messages[chat.messages.length - 1]._id;
     await chat.save();
 
-    // Populate sender info for response
-    const populatedChat = await Chat.findById(chat._id)
-      .populate('messages.sender', 'name role profile');
+    const populatedChat = await Chat.findById(chat._id).lean();
+    await Chat.populate(populatedChat, {
+      path: "messages.sender",
+      select: "name role profile"
+    });
 
-    const newMessage = populatedChat.messages[populatedChat.messages.length - 1];
+    const newMessage =
+      populatedChat.messages[populatedChat.messages.length - 1];
 
-    // Emit socket event
-    req.app.get('io').to(chat._id.toString()).emit('newMessage', newMessage);
+    req.app.get('io')
+      .to(chat._id.toString())
+      .emit('newMessage', newMessage);
 
     res.json(newMessage);
   } catch (error) {
@@ -130,20 +147,20 @@ router.post('/:chatId/messages', auth, async (req, res) => {
   }
 });
 
-// Mark messages as read
+
+// Mark as read
 router.patch('/:chatId/messages/read', auth, async (req, res) => {
   try {
     const chat = await Chat.findById(req.params.chatId);
-    
+
     if (!chat) {
       return res.status(404).json({ error: 'Chat not found' });
     }
 
-    // Mark all unread messages as read by this user
-    chat.messages.forEach(message => {
-      const alreadyRead = message.readBy.some(read => read.user.toString() === req.user.id);
-      if (!alreadyRead) {
-        message.readBy.push({ user: req.user.id });
+    chat.messages.forEach(msg => {
+      const exists = msg.readBy.some(r => r.user.toString() === req.user.id);
+      if (!exists) {
+        msg.readBy.push({ user: req.user.id });
       }
     });
 

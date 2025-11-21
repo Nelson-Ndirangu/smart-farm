@@ -162,7 +162,7 @@ const Home = () => {
 
             {/* Benefit 4 */}
             <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition duration-300">
-              <div className="text-green-600 text-4xl mb-4">💰</div>
+              <div className="text-green-600 text-4xl mb-4"></div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Affordable Pricing</h3>
               <p className="text-gray-600">
                 Access professional agricultural advice at prices suitable for small-scale farmers.
@@ -171,7 +171,7 @@ const Home = () => {
 
             {/* Benefit 5 */}
             <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition duration-300">
-              <div className="text-green-600 text-4xl mb-4">📱</div>
+              <div className="text-green-600 text-4xl mb-4"></div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Easy to Use</h3>
               <p className="text-gray-600">
                 Simple interface designed for farmers with varying levels of tech experience.
@@ -180,7 +180,7 @@ const Home = () => {
 
             {/* Benefit 6 */}
             <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition duration-300">
-              <div className="text-green-600 text-4xl mb-4">🏆</div>
+              <div className="text-green-600 text-4xl mb-4"></div>
               <h3 className="text-xl font-bold text-gray-900 mb-2">Proven Results</h3>
               <p className="text-gray-600">
                 Join hundreds of farmers who have increased their yields with our platform.

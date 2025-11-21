@@ -19,7 +19,9 @@ const BookConsultation = () => {
       try {
         const response = await fetch(`/api/users/${agronomistId}`);
         const data = await response.json();
-        setAgronomist(data);
+
+        // your backend returns: { user: { ... } }
+        setAgronomist(data.user);
       } catch (err) {
         console.error('Error fetching agronomist:', err);
         setError('Failed to load agronomist details.');
@@ -36,21 +38,20 @@ const BookConsultation = () => {
     setError('');
 
     try {
-      // Create new consultation
+      // Must match backend required fields
       const consultationData = {
-        agronomist: agronomist._id,
+        agronomistId: agronomist._id,         // ✔ CORRECT FIELD
         topic: `Consultation with ${agronomist.name}`,
-        description: ''
-        // price: 0 // set default or add form input
-        };
+        description: '',
+        price: 0                              // ✔ REQUIRED BY BACKEND
+      };
 
       const res = await consultationsAPI.create(consultationData);
-      const consultation = res.data;
+      const consultation = res.data.consultation;
 
       // Create chat for consultation
       await chatAPI.getOrCreateChat(consultation._id);
 
-      // Redirect to consultations page
       navigate('/consultations');
     } catch (err) {
       console.error('Error booking consultation:', err);
@@ -87,7 +88,7 @@ const BookConsultation = () => {
           <button
             onClick={handleBookConsultation}
             disabled={loading}
-            className="w-full block text-center bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full bg-green-500 text-white py-3 rounded-lg hover:bg-green-600 transition duration-200 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {loading ? 'Booking...' : 'Continue to Booking'}
           </button>

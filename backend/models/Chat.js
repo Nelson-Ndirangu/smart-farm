@@ -2,16 +2,8 @@
 const mongoose = require('mongoose');
 
 const MessageSchema = new mongoose.Schema({
-  sender: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User',
-    required: true
-  },
-  content: {
-    type: String,
-    required: true,
-    trim: true
-  },
+  sender: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  content: { type: String, required: true, trim: true },
   messageType: {
     type: String,
     enum: ['text', 'image', 'file', 'system'],
@@ -19,37 +11,28 @@ const MessageSchema = new mongoose.Schema({
   },
   fileUrl: String,
   readBy: [{
-    user: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
-    },
-    readAt: {
-      type: Date,
-      default: Date.now
-    }
+    user: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    readAt: { type: Date, default: Date.now }
   }]
 }, { timestamps: true });
 
 const ChatSchema = new mongoose.Schema({
-  consultation: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Consultation',
-    required: true
-  },
+  consultation: { type: mongoose.Schema.Types.ObjectId, ref: 'Consultation', required: true },
+
   participants: [{
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
     required: true
   }],
+
   messages: [MessageSchema],
+
   lastMessage: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Message'
+    type: Object,
+    default: null
   },
-  isActive: {
-    type: Boolean,
-    default: true
-  }
+
+  isActive: { type: Boolean, default: true }
 }, { timestamps: true });
 
 module.exports = mongoose.model('Chat', ChatSchema);
