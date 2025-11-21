@@ -21,7 +21,7 @@ connectDB();
 app.use(cors({
   origin: process.env.ALLOWED_ORIGINS || 'http://localhost:5173',
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS']
 }));
 
 app.use(express.json());
@@ -40,7 +40,7 @@ const server = http.createServer(app);
 // Socket.io setup (improved CORS)
 const io = socketIo(server, {
   cors: {
-    origin: process.env.ALLOWED_ORIGINS || "'http://localhost:5173'",
+    origin: process.env.ALLOWED_ORIGINS || "http://localhost:5173",
     credentials: true,
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["*"]
