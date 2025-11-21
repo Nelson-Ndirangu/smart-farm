@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
-const userController = require('../controllers/userController');
+const userController = require('../controllers/userControllers');
 
 router.get('/test', (req, res) => res.json({ ok: true }));
 router.get('/me', auth(), userController.getProfile);

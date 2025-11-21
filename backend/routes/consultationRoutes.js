@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/authMiddleware');
 const consultationController = require('../controllers/consultationController');
-const userController = require('../controllers/userController');
+const userController = require('../controllers/userControllers');
 
 // create consultation request (farmer)
 router.post('/', auth('farmer'), consultationController.createConsultationRequest);
