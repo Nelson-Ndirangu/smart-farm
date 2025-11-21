@@ -19,7 +19,7 @@ connectDB();
 
 // Middleware
 app.use(cors({
-  origin: process.env.ALLOWED_ORIGINS || 'https://smart-farm-bay.vercel.app/',
+  origin: process.env.ALLOWED_ORIGINS || 'http://localhost:5173',
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
 }));
@@ -40,7 +40,7 @@ const server = http.createServer(app);
 // Socket.io setup (improved CORS)
 const io = socketIo(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || "https://smart-farm-bay.vercel.app/",
+    origin: process.env.ALLOWED_ORIGINS || "'http://localhost:5173'",
     credentials: true,
     methods: ["GET", "POST", "OPTIONS"],
     allowedHeaders: ["*"]
